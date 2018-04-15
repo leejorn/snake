@@ -25,7 +25,7 @@ code segment
                mov sp, 8000H
 
                ; clear all the world_map
-               ;call clear_world
+               call clear_world
 
 	       ; init the snake_head
                mov [snake_head], offset snake_list
@@ -50,9 +50,11 @@ code segment
                call draw_snake
 
                ; init the food
+               push bx
                mov bx, offset food_pos
                mov byte ptr [bx], 20
                mov byte ptr [bx+1], 20
+               pop bx
 
 	       ; draw the init food
                call draw_food
@@ -67,8 +69,10 @@ code segment
               ; int 21h
               ; pop ds
 
-             mov cx, 10000 
+             push cx
+             mov cx, 30000 
         s1:  loop s1
+             pop cx
              mov ax, 4c00h
              int 21h
 
@@ -122,8 +126,8 @@ code segment
 		     jmp cwp1
 	       cwp4: mov ax, 80*25
                      push ax
-                     mov al, '-'
-                     mov ah, 00000110b
+                     mov al, ' '
+                     mov ah, 0
                      push ax
                      call draw_point
                      popf
@@ -206,7 +210,8 @@ code segment
                      mov ax, 1
                      push ax
                      mov al, '$'
-                     mov ah, 10001110b 
+                     mov ah, 10001110b
+                     push ax
 		     call draw_point
                      popf
                      pop ax
