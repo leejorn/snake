@@ -14,7 +14,7 @@ data segment
 data ends
 
 stack segment
-        db 128 dup(0)
+        db 8000H dup(0)
 stack ends
 
 code segment
@@ -22,10 +22,10 @@ code segment
                mov ds, ax
                mov ax, stack
                mov ss, ax
-               mov sp, 128
+               mov sp, 8000H
 
                ; clear all the world_map
-	       call clear_world
+               ;call clear_world
 
 	       ; init the snake_head
                mov [snake_head], offset snake_list
@@ -57,16 +57,17 @@ code segment
                call draw_food
                
 	       ; the first thing is : reset new timer tick process, use int 21h (25) to reset int 1ch
-               push ds
-               mov ax, seg tick_proc
-               mov ds, ax
-               mov dx, offset tick_proc
-               mov ah, 25h
-               mov al, 1ch
-               int 21h
-               pop ds
-	      
-        s1:  jmp s1
+              ; push ds
+              ; mov ax, seg tick_proc
+              ; mov ds, ax
+              ; mov dx, offset tick_proc
+              ; mov ah, 25h
+              ; mov al, 1ch
+              ; int 21h
+              ; pop ds
+
+             mov cx, 10000 
+        s1:  loop s1
              mov ax, 4c00h
              int 21h
 
@@ -121,7 +122,7 @@ code segment
 	       cwp4: mov ax, 80*25
                      push ax
                      mov al, '-'
-                     mov ah, 00000001b
+                     mov ah, 00000110b
                      push ax
                      call draw_point
                      popf
@@ -222,16 +223,16 @@ code segment
 		    push di
 		    push si
 
-                    mov bx, ss:[bp+2]     ; draw char
-		    mov cx, ss:[bp+2+2]   ; loop times
+                    mov bx, ss:[bp+4]     ; draw char
+                    mov cx, ss:[bp+4+2]   ; loop times
 		    mov ax, 0B800H
 		    mov es, ax
 		    mov si, 0
 	       do1: mov ax, 2h
-                    mul byte ptr ss:[bp+2+4+si]  ; pos cow
+                    mul byte ptr ss:[bp+4+4+si]  ; pos cow
                     mov di, ax
                     mov ax, 160
-                    mul byte ptr ss:[bp+2+4+si+1] ; pos row
+                    mul byte ptr ss:[bp+4+4+si+1] ; pos row
                     add di, ax                  ; the draw pos idx
                     mov es:[di], bx
 		    add si, 2
@@ -250,3 +251,4 @@ code segment
                     ret
 code ends
 end start
+                            
