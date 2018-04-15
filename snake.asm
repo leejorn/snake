@@ -6,8 +6,8 @@ assume cs:code, ds:data, ss:stack
 
 data segment
          ticknum dw 1 dup(0)
-	 snake_head dw dup(0) ; snake_list head, init = add snake_list, 80*25*4, desc when add on grid
-         snake_tail dw dup(0) ; snake_list tail, init = add snake_list, 80*25*4, no change after seted
+         snake_head dw 1 dup(0) ; snake_list head, init = add snake_list, 80*25*4, desc when add on grid
+         snake_tail dw 1 dup(0) ; snake_list tail, init = add snake_list, 80*25*4, no change after seted
 	 snake_list dd 80*25 dup(0) ; snake_list single is (col(8bit) row(8bit) dir(8bit) flag(8bit))
          world_map db 80*25 dup(0) ; dir(8bit) 
          food_pos dw 1 dup(0)  ; food pos (col(8bit) row(8bit)) 
@@ -34,9 +34,9 @@ code segment
                push bx
 	       sub [snake_head], 4
 	       mov bx, [snake_head]
-               mov [bx], 40  ; col 40
-               mov [bx+1], 13 ; low 13
-               mov [bx+2], 1 ; dir 1:up 2:right 3:down 4:left
+               mov byte ptr [bx], 40  ; col 40
+               mov byte ptr [bx+1], 13 ; low 13
+               mov byte ptr [bx+2], 1 ; dir 1:up 2:right 3:down 4:left
                pop bx
 
                ; init the snake tail = head, after now, no change
@@ -58,7 +58,8 @@ code segment
                
 	       ; the first thing is : reset new timer tick process, use int 21h (25) to reset int 1ch
                push ds
-               mov ds, seg tick_proc
+               mov ax, seg tick_proc
+               mov ds, ax
                mov dx, offset tick_proc
                mov ah, 25h
                mov al, 1ch
