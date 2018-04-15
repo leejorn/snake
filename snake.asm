@@ -106,17 +106,28 @@ code segment
                      mov bp, sp
                      push ax
                      pushf
-		       mov ax, 0 
-		       cmp al, 80
-		       jnb cwp1
-		       cmp ah, 25
-		       jnb cwp2
-		       push ax
+		     mov al, 0 
+	       cwp1: cmp al, 80
+		     je cwp4
+		     mov ah, 0
+	       cwp2: cmp ah, 25
+		     je cwp3
+		     push ax
+		     inc ah
+		     jmp cwp2
+	       cwp3: inc al
+		     jmp cwp1
+	       cwp4: mov ax, 80*25
+                     push ax
+                     mov al, '-'
+                     mov ah, 00000001b
+                     push ax
+                     call draw_point
                      popf
-                     pop ax
-                     mov sp, bp
-                     pop bp
-                     ret
+		     pop ax
+		     mov sp, bp
+		     pop bp
+		     ret
 
 	clear_snake: push bp
 		     mov bp, sp
