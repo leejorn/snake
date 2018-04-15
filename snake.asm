@@ -31,6 +31,13 @@ code segment
                mov [snake_head], offset snake_list
                add [snake_head], 80*25*4   ; get the last pos of snake
 
+               ; init the snake tail = head, after now, no change
+               push ax
+               mov ax, [snake_head]
+               mov [snake_tail], ax
+               pop ax
+
+	       ; add one snake grid as snake head
                push bx
 	       sub [snake_head], 4
 	       mov bx, [snake_head]
@@ -38,12 +45,6 @@ code segment
                mov byte ptr [bx+1], 13 ; low 13
                mov byte ptr [bx+2], 1 ; dir 1:up 2:right 3:down 4:left
                pop bx
-
-               ; init the snake tail = head, after now, no change
-               push ax
-               mov ax, [snake_head]
-               mov [snake_tail], ax
-               pop ax
 
                ; draw the init snake
                call draw_snake
