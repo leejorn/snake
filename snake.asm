@@ -94,8 +94,13 @@ code segment
                   pop ax
                   ret
 
-	gen_food: 
-	read_keyword:  
+	; gen new food pos, if no food now
+	gen_food: ret
+
+	; up, right, down, left the snake list
+	; esc game y/n ? when button esc
+        ; quit game if button y, continue game if button n
+	read_keyword: ret 
 
 	clear_world: push bp
                      mov bp, sp
