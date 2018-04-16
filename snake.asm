@@ -60,14 +60,14 @@ code segment
                call draw_food
                
 	       ; the first thing is : reset new timer tick process, use int 21h (25) to reset int 1ch
-              ; push ds
-              ; mov ax, seg tick_proc
-              ; mov ds, ax
-              ; mov dx, offset tick_proc
-              ; mov ah, 25h
-              ; mov al, 1ch
-              ; int 21h
-              ; pop ds
+               push ds
+               mov ax, seg tick_proc
+               mov ds, ax
+               mov dx, offset tick_proc
+               mov ah, 25h
+               mov al, 1ch
+               int 21h
+               pop ds
 
              push cx
              mov cx, 30000 
@@ -76,7 +76,8 @@ code segment
              mov ax, 4c00h
              int 21h
 
-       tick_proc: push ax
+       tick_proc: cli
+                  push ax
                   push bx
                   add [ticknum], 1
 		  cmp [ticknum], 200
@@ -99,6 +100,7 @@ code segment
 
              tp3: pop bx
                   pop ax
+                  sti
                   ret
 
 	; gen new food pos, if no food now
@@ -107,7 +109,80 @@ code segment
 	; up, right, down, left the snake list
 	; esc game y/n ? when button esc
         ; quit game if button y, continue game if button n
-	read_keyword: ret 
+	read_keyword: push ax
+                      push bx
+                      mov ax, 0
+                      int 16h
+                      cmp al, 'i' ; up
+                      jne kw2
+                      mov bx, 1
+                 kw2: cmp al, 'k' ; down
+                      jne kw3
+                      mov bx, 3
+                 kw3: cmp al, 'j' ; left
+                      jne kw4
+                      mov bx, 4
+                 kw4: cmp al, 'l' ; right
+                      jne kw5
+                      mov bx, 2
+                 kw5: cmp bx, 0
+                      je kw6
+
+                      push bp
+                      mov bp, sp
+                      pushf
+                      push bx
+                      call check_snake_run  
+                      popf
+                      mov sp, bp
+                      pop bp
+
+                 kw6: pop bx
+                      pop ax
+		      ret 
+
+        ; check snake run
+        check_snake_run: push bp
+                         mov bp, sp
+                         pushf
+                         pof
+			 mov ax, ss:[bp+4] ; dir now
+                         mov bx, [snake_head] ; head ptr
+                         mov byte ptr [bx+2], al ; head dir
+                         mov byte ptr [bx+80*25*4], al ; map dir
+                         ; check snake run ahead
+		csr1:	 cmp bx, [snake_tail] ; if is tail, stop run
+                         je csr_stop
+			 mov ax, word ptr [bx] ; head pos
+                         cmp byte ptr [bx+2], 1 ; up
+                         jne csr2
+                         sub ah, 1
+                         cmp ah, 0 ; < 0 , stop
+                         jnb csr_stop
+                         cmp byte ptr [bx+2], 2 ; right
+                         jne csr3
+                         add al, 1
+                         cmp al, 79
+                         jnb csr_stop
+                         cmp byte ptr [bx+2], 3 ; down
+                         jne csr4
+                         add ah, 1
+                         cmp ah, 24
+                         jnb csr_stop
+                         cmp byte ptr [bx+2], 4 ; left
+                         jne csr5
+                         sub al, 1
+                         cmp al, 0
+                         jnb csr_stop
+                         
+                         ; can run head
+                         
+          
+                         
+                          
+                         mov sp, bp
+                         pop bp
+                         ret
 
 	clear_world: push bp
                      mov bp, sp
@@ -205,6 +280,7 @@ code segment
 		     mov bp, sp
                      push ax
                      pushf
+
                      mov ax, word ptr [food_pos]
 		     push ax
                      mov ax, 1
@@ -213,6 +289,7 @@ code segment
                      mov ah, 10001110b
                      push ax
 		     call draw_point
+
                      popf
                      pop ax
 		     mov sp, bp
