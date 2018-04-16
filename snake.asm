@@ -6,8 +6,10 @@ assume cs:code, ds:data, ss:stack
 
 data segment
          ticknum dw 1 dup(0)
-         snake_head dw 1 dup(0) ; snake_list head, init = add snake_list, 80*25*4, desc when add on grid
-         snake_tail dw 1 dup(0) ; snake_list tail, init = add snake_list, 80*25*4, no change after seted
+         snake_head dw 1 dup(0) ; snake_list head, 
+         snake_tail dw 1 dup(0) ; snake_list tail, 
+	 static_head dw 1 dup(0); head, no change = snake_list
+         static_tail dw 1 dup(0); tail, no change = snake_list + 80*25*4
 	 snake_list dd 80*25 dup(0) ; snake_list single is (col(8bit) row(8bit) dir(8bit) flag(8bit))
          world_map db 80*25 dup(0) ; dir(8bit) 
          food_pos dw 1 dup(0)  ; food pos (col(8bit) row(8bit)) 
@@ -27,23 +29,23 @@ code segment
                ; clear all the world_map
                call clear_world
 
-	       ; init the snake_head
-               mov [snake_head], offset snake_list
-               add [snake_head], 80*25*4   ; get the last pos of snake
+	       ; init the static head and tail. do not change after now
+               mov [static_head], offset snake_list
+               mov [static_tail], offset snake_list
+               add [static_tail], (80*25-1)*4
 
-               ; init the snake tail = head, after now, no change
-               push ax
-               mov ax, [snake_head]
+	       ; init the run snake_head and snake_tail
+               push ax, [static_tail]
                mov [snake_tail], ax
+               mov [snake_head], ax
                pop ax
 
-	       ; add one snake grid as snake head
-               push bx
+	       ; init the first one snake grid
 	       sub [snake_head], 4
-	       mov bx, [snake_head]
-               mov byte ptr [bx], 40  ; col 40
-               mov byte ptr [bx+1], 13 ; low 13
-               mov byte ptr [bx+2], 1 ; dir 1:up 2:right 3:down 4:left
+               push bx
+               mov bx, [snake_head]
+               mov byte ptr [bx], 40; col 40      0 <= col <= 79
+               mov byte ptr [bx+1], 13; row 13    0 <= row <= 24
                pop bx
 
                ; draw the init snake
@@ -113,73 +115,43 @@ code segment
                       push bx
                       mov ax, 0
                       int 16h
-                      cmp al, 'i' ; up
+                 kw1: cmp al, 'i' ; up
                       jne kw2
                       mov bx, 1
+                      jmp kw_do
                  kw2: cmp al, 'k' ; down
                       jne kw3
                       mov bx, 3
+                      jmp kw_do
                  kw3: cmp al, 'j' ; left
                       jne kw4
                       mov bx, 4
+                      jmp kw_do
                  kw4: cmp al, 'l' ; right
-                      jne kw5
+                      jne kw_do
                       mov bx, 2
-                 kw5: cmp bx, 0
-                      je kw6
+               kw_do: cmp bx, 0
+                      je kw_done
 
                       push bp
                       mov bp, sp
                       pushf
                       push bx
-                      call check_snake_run  
+                      call snake_eat_ahead  
                       popf
                       mov sp, bp
                       pop bp
 
-                 kw6: pop bx
+             kw_done: pop bx
                       pop ax
 		      ret 
 
-        ; check snake run
-        check_snake_run: push bp
+        ; snake_eat_ahead
+        snake_eat_ahead: push bp
                          mov bp, sp
                          pushf
+
                          pof
-			 mov ax, ss:[bp+4] ; dir now
-                         mov bx, [snake_head] ; head ptr
-                         mov byte ptr [bx+2], al ; head dir
-                         mov byte ptr [bx+80*25*4], al ; map dir
-                         ; check snake run ahead
-		csr1:	 cmp bx, [snake_tail] ; if is tail, stop run
-                         je csr_stop
-			 mov ax, word ptr [bx] ; head pos
-                         cmp byte ptr [bx+2], 1 ; up
-                         jne csr2
-                         sub ah, 1
-                         cmp ah, 0 ; < 0 , stop
-                         jnb csr_stop
-                         cmp byte ptr [bx+2], 2 ; right
-                         jne csr3
-                         add al, 1
-                         cmp al, 79
-                         jnb csr_stop
-                         cmp byte ptr [bx+2], 3 ; down
-                         jne csr4
-                         add ah, 1
-                         cmp ah, 24
-                         jnb csr_stop
-                         cmp byte ptr [bx+2], 4 ; left
-                         jne csr5
-                         sub al, 1
-                         cmp al, 0
-                         jnb csr_stop
-                         
-                         ; can run head
-                         
-          
-                         
-                          
                          mov sp, bp
                          pop bp
                          ret
@@ -253,11 +225,14 @@ code segment
 		     mov bx, 0
                      mov di, [snake_head]
                dsp1: cmp di, [snake_tail]
-		     jnb dsp2
+		     je dsp2
 		     mov ax, [di]
 		     push ax
-                     add di, 4
                      inc bx
+                     add di, 4
+                     cmp di, [static_tail] 
+                     jna dsp1
+                     mov di, [static_head]
                      jmp dsp1	
                dsp2: cmp bx, 0
                      je dsp3
