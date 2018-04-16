@@ -49,7 +49,8 @@ code segment
                pop bx
 
                ; draw the init snake
-               call draw_snake
+               ; call draw_snake
+               call draw_snake_head
 
                ; init the food
                push bx
@@ -121,15 +122,15 @@ code segment
                       jmp kw_do
                  kw2: cmp al, 'k' ; down
                       jne kw3
-                      mov bx, 3
+                      mov bx, 2
                       jmp kw_do
                  kw3: cmp al, 'j' ; left
                       jne kw4
-                      mov bx, 4
+                      mov bx, 3
                       jmp kw_do
                  kw4: cmp al, 'l' ; right
                       jne kw_do
-                      mov bx, 2
+                      mov bx, 4
                kw_do: cmp bx, 0
                       je kw_done
 
@@ -151,7 +152,55 @@ code segment
                          mov bp, sp
                          pushf
 
-                         pof
+			 mov ax, [bp + 4] ; dir
+			 mov si, [snake_head]
+                         mov dx, [si]
+                 sea_up: cmp ax, 1
+			 jne sea_down
+                         cmp dh, 0
+                         je sea_done
+                         sub dh, 1
+                         jmp sea_do
+               sea_down: cmp ax, 2
+                         jne sea_left
+                         cmp dh, 24
+                         je sea_done
+                         add dh, 1
+                         jmp sea_do
+               sea_left: cmp ax, 3
+                         jne sea_right
+                         cmp dl, 0
+                         je sea_done
+                         sub dl, 1
+                         jmp sea_do                       
+              sea_right: cmp ax, 4
+                         jne sea_done
+                         cmp dl, 79
+                         je sea_done
+                         add dl, 1
+                         jmp sea_do
+                 sea_do: cmp si, [static_head] ; if need turn around
+                         je sea_head_around
+                         sub si, 4
+        sea_head_around: mov si, [static_tail] ; head around to static tail
+                         mov [si], dx ; add head
+                         mov [snake_head], si ; change head
+                         call draw_snake_head ; draw head 
+
+                         cmp dx, [food_pos] ; if eat the food
+                         je sea_food
+                         mov si, [snake_tail]
+                         cmp si, [static_head]
+                         je sea_tail_around
+                         sub si, 4
+        sea_tail_around: mov si, [static_tail] ; tail around to static tail
+                         mov [snake_tail], si
+                         call clear_snake_tail
+                         jmp sea_done
+
+              sea_food:  call clear_food
+              
+               sea_done: pof
                          mov sp, bp
                          pop bp
                          ret
@@ -238,7 +287,7 @@ code segment
                      je dsp3
                      push bx
                      mov al, '*'
-                     mov ah, 02h
+                     mov ah, 00000010h
                      push ax
 		     call draw_point
 
@@ -251,7 +300,54 @@ code segment
 		     		
 		     ret
 
-	draw_food:   push bp
+    draw_snake_head: push bp
+		     mov bp, sp
+                     push ax
+		     push bx
+                     pushf
+
+                     mov bx, word ptr [snake_head]
+                     mov ax, [bx]
+		     push ax
+                     mov ax, 1
+                     push ax
+                     mov al, '*'
+                     mov ah, 00000010b
+                     push ax
+		     call draw_point
+
+                     popf
+		     pop bx
+                     pop ax
+		     mov sp, bp
+		     pop bp
+		     ret
+
+   clear_snake_tail: push bp
+		     mov bp, sp
+                     push ax
+		     push bx
+                     pushf
+
+                     mov bx, word ptr [snake_tail]
+		     mov ax, [bx]
+		     push ax
+                     mov ax, 1
+                     push ax
+                     mov al, ' '
+                     mov ah, 0
+                     push ax
+		     call draw_point
+                     mov dword ptr [bx], 0 ; clear tail data
+
+                     popf
+		     pop bx
+                     pop ax
+		     mov sp, bp
+		     pop bp
+		     ret
+
+	  draw_food: push bp
 		     mov bp, sp
                      push ax
                      pushf
@@ -264,6 +360,28 @@ code segment
                      mov ah, 10001110b
                      push ax
 		     call draw_point
+
+                     popf
+                     pop ax
+		     mov sp, bp
+		     pop bp
+		     ret
+
+       clear_food:   push bp
+		     mov bp, sp
+                     push ax
+                     pushf
+
+                     mov ax, word ptr [food_pos]
+		     push ax
+                     mov ax, 1
+                     push ax
+                     mov al, ' '
+                     mov ah, 0
+                     push ax
+		     call draw_point
+                     
+                     mov word ptr [food_pos], 0 ; clear food pos
 
                      popf
                      pop ax
