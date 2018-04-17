@@ -35,7 +35,8 @@ code segment
                add [static_tail], (80*25-1)*4
 
 	       ; init the run snake_head and snake_tail
-               push ax, [static_tail]
+               push ax
+               mov ax, [static_tail]
                mov [snake_tail], ax
                mov [snake_head], ax
                pop ax
@@ -48,9 +49,16 @@ code segment
                mov byte ptr [bx+1], 13; row 13    0 <= row <= 24
                pop bx
 
+               sub [snake_head], 4
+               push bx
+               mov bx, [snake_head]
+               mov byte ptr [bx], 39 ; col 39
+               mov byte ptr [bx+1], 13 ; row 13
+               pop bx
+
                ; draw the init snake
-               ; call draw_snake
-               call draw_snake_head
+               call draw_snake
+               ; call draw_snake_head
 
                ; init the food
                push bx
@@ -200,7 +208,7 @@ code segment
 
               sea_food:  call clear_food
               
-               sea_done: pof
+               sea_done: popf
                          mov sp, bp
                          pop bp
                          ret
@@ -287,7 +295,7 @@ code segment
                      je dsp3
                      push bx
                      mov al, '*'
-                     mov ah, 00000010h
+                     mov ah, 00000010b
                      push ax
 		     call draw_point
 
@@ -338,7 +346,8 @@ code segment
                      mov ah, 0
                      push ax
 		     call draw_point
-                     mov dword ptr [bx], 0 ; clear tail data
+                     mov word ptr [bx], 0 ; clear tail data
+                     mov word ptr [bx+2], 0
 
                      popf
 		     pop bx
