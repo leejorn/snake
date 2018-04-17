@@ -6,6 +6,9 @@ assume cs:code, ds:data, ss:stack
 
 data segment
          ticknum dw 1 dup(0)
+         wordchar dw 1 dup(0)
+         snakechar dw 1 dup(0)
+         foodchar dw 1 dup(0)
          snake_head dw 1 dup(0) ; snake_list head, 
          snake_tail dw 1 dup(0) ; snake_list tail, 
 	 static_head dw 1 dup(0); head, no change = snake_list
@@ -80,14 +83,11 @@ code segment
                int 21h
                pop ds
 
-             push cx
-             mov cx, 30000 
-        s1:  loop s1
-             pop cx
+        s1:  jmp s1
              mov ax, 4c00h
              int 21h
 
-       tick_proc: cli
+       tick_proc: iret
                   push ax
                   push bx
                   add [ticknum], 1
@@ -111,8 +111,7 @@ code segment
 
              tp3: pop bx
                   pop ax
-                  sti
-                  ret
+                  iret
 
 	; gen new food pos, if no food now
 	gen_food: ret
@@ -213,10 +212,11 @@ code segment
                          pop bp
                          ret
 
-	clear_world: push bp
-                     mov bp, sp
+        clear_world: pushf
                      push ax
-                     pushf
+                     push bp
+                     mov bp, sp
+
 		     mov al, 0 
 	       cwp1: cmp al, 80
 		     je cwp4
@@ -230,14 +230,15 @@ code segment
 		     jmp cwp1
 	       cwp4: mov ax, 80*25
                      push ax
-                     mov al, ' '
-                     mov ah, 0
+                     mov al, '+'
+                     mov ah, 00000001b
                      push ax
                      call draw_point
-                     popf
-		     pop ax
+
 		     mov sp, bp
 		     pop bp
+                     pop ax
+                     popf
 		     ret
 
 	clear_snake: push bp
@@ -400,6 +401,7 @@ code segment
 
         draw_point: push bp
                     mov bp, sp
+
                     pushf
 		    push ax
                     push bx
@@ -430,6 +432,7 @@ code segment
 		    pop bx
 		    pop ax
 		    popf
+
 		    mov sp, bp
 		    pop bp
 
