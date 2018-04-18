@@ -5,7 +5,7 @@
 assume cs:code, ds:data, ss:stack
 
 data segment
-         ticknum dw 1 dup(0)
+         snakedir db 1 dup(0)
          worldchar db 1 dup(0)
          worldcolor db 1 dup(0)
          snakechar db 1 dup(0)
@@ -83,43 +83,26 @@ code segment
 	       ; draw the init food
                call draw_food
 
-               mov byte ptr [foodchar], '@'
-               mov byte ptr [foodcolor], 10000011b
-               call draw_food
-
-	; up, right, down, left the snake list
+        ; up, right, down, left the snake list
 	; esc game y/n ? when button esc
         ; quit game if button y, continue game if button n
 	read_keyword: push ax
                       push bx
                       mov ax, 0
-                      int 16h
-                 kw1: cmp al, 'i' ; up
-                      jne kw2
-                      mov bx, 1
-                      jmp kw_do
-                 kw2: cmp al, 'k' ; down
-                      jne kw3
-                      mov bx, 2
-                      jmp kw_do
-                 kw3: cmp al, 'j' ; left
-                      jne kw4
-                      mov bx, 3
-                      jmp kw_do
-                 kw4: cmp al, 'l' ; right
-                      jne kw_do
-                      mov bx, 4
-               kw_do: cmp bx, 0
-                      je kw_done
+                      int 16h 
 
-                      push bp
-                      mov bp, sp
-                      pushf
-                      push bx
-                      call snake_eat_ahead  
-                      popf
-                      mov sp, bp
-                      pop bp
+                      cmp al, 'i' ; up
+                      je kw_do                                    
+                      cmp al, 'k' ; down
+                      je kw_do
+                      cmp al, 'j' ; left
+                      je kw_do
+                      cmp al, 'l' ; right
+                      je kw_do
+                      jmp kw_done
+
+               kw_do: mov byte ptr [snakedir], al
+                      call snake_eat_ahead                       
 
              kw_done: pop bx
                       pop ax
@@ -134,38 +117,37 @@ code segment
                          mov bp, sp
                          pushf
 
-			 mov ax, word ptr [bp + 4] ; dir
 			 mov si, word ptr [snake_head]
                          mov dx, word ptr [si]
-                 sea_up: cmp ax, 1
+                 sea_up: cmp byte ptr [snakedir], 'i'
 			 jne sea_down
                          cmp dh, 0
                          je sea_done
                          sub dh, 1
                          jmp sea_do
-               sea_down: cmp ax, 2
+               sea_down: cmp byte ptr [snakedir], 'k'
                          jne sea_left
                          cmp dh, 24
                          je sea_done
                          add dh, 1
                          jmp sea_do
-               sea_left: cmp ax, 3
+               sea_left: cmp byte ptr [snakedir], 'j'
                          jne sea_right
                          cmp dl, 0
                          je sea_done
                          sub dl, 1
                          jmp sea_do                       
-              sea_right: cmp ax, 4
+              sea_right: cmp byte ptr [snakedir], 'l'
                          jne sea_done
                          cmp dl, 79
                          je sea_done
                          add dl, 1
-                         jmp sea_do
                  sea_do: cmp si, word ptr [static_head] ; if need turn around
                          je sea_head_around
                          sub si, 4
+                         jmp sea_add_head
         sea_head_around: mov si, word ptr [static_tail] ; head around to static tail
-                         mov word ptr [si], dx ; add head
+        sea_add_head:    mov word ptr [si], dx ; add head
                          mov word ptr [snake_head], si ; change head
                          call draw_snake_head ; draw head 
 
@@ -175,8 +157,9 @@ code segment
                          cmp si, word ptr [static_head]
                          je sea_tail_around
                          sub si, 4
+                         jmp sea_sub_tail
         sea_tail_around: mov si, word ptr [static_tail] ; tail around to static tail
-                         mov word ptr [snake_tail], si
+        sea_sub_tail:    mov word ptr [snake_tail], si
                          call clear_snake_tail
                          jmp sea_done
 
