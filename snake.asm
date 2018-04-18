@@ -6,13 +6,16 @@ assume cs:code, ds:data, ss:stack
 
 data segment
          ticknum dw 1 dup(0)
-         wordchar dw 1 dup(0)
-         snakechar dw 1 dup(0)
-         foodchar dw 1 dup(0)
+         worldchar db 1 dup(0)
+         worldcolor db 1 dup(0)
+         snakechar db 1 dup(0)
+         snakecolor db 1 dup(0)
+         foodchar db 1 dup(0)
+         foodcolor db 1 dup(0)
          snake_head dw 1 dup(0) ; snake_list head, 
          snake_tail dw 1 dup(0) ; snake_list tail, 
 	 static_head dw 1 dup(0); head, no change = snake_list
-         static_tail dw 1 dup(0); tail, no change = snake_list + 80*25*4
+         static_tail dw 1 dup(0); tail, no change = snake_list + (80*25 -1)*4
 	 snake_list dd 80*25 dup(0) ; snake_list single is (col(8bit) row(8bit) dir(8bit) flag(8bit))
          world_map db 80*25 dup(0) ; dir(8bit) 
          food_pos dw 1 dup(0)  ; food pos (col(8bit) row(8bit)) 
@@ -28,6 +31,13 @@ code segment
                mov ax, stack
                mov ss, ax
                mov sp, 8000H
+
+               mov byte ptr [worldchar], '+'
+               mov byte ptr [worldcolor], 00000010b
+               mov byte ptr [snakechar], '*'
+               mov byte ptr [snakecolor], 00000100b
+               mov byte ptr [foodchar], '$'
+               mov byte ptr [foodcolor], 00000110b
 
                ; clear all the world_map
                call clear_world
@@ -72,6 +82,10 @@ code segment
 
 	       ; draw the init food
                call draw_food
+
+               mov byte ptr [foodchar], '@'
+               mov byte ptr [foodcolor], 10000011b
+               call draw_food
                
 	       ; the first thing is : reset new timer tick process, use int 21h (25) to reset int 1ch
                push ds
@@ -83,33 +97,52 @@ code segment
                int 21h
                pop ds
 
-        s1:  jmp s1
+        s1:  nop
+             jmp s1
              mov ax, 4c00h
              int 21h
 
-       tick_proc: iret
-                  push ax
+       tick_proc: push ax
                   push bx
-                  add [ticknum], 1
-		  cmp [ticknum], 200
-                  jne tp1
-                  mov [ticknum], 0
+                  push bp
+                  mov sp, bp
 
-	     tp1: mov ax, [ticknum]
+                  add word ptr [ticknum], 1
+                  cmp word ptr [ticknum], 1800
+                  jne tp3
+                  mov word ptr [ticknum], 0
+                  jmp tp3
+
+             tp1: mov ax, word ptr [ticknum]
                   mov bl, 4
                   div bl
                   cmp ah, 0
                   jne tp2
                   call read_keyword  ;  check the keyword buff
   
-             tp2: mov ax, [ticknum]
+             tp2: mov ax, word ptr [ticknum]
                   mov bl, 20
                   div bl
                   cmp ah, 0
-                  jne tp3
+                  jne tp_done
                   call gen_food ; random gen food
 
-             tp3: pop bx
+             tp3: mov ax, word ptr [ticknum]
+                  mov bl, 180
+                  div bl
+                  cmp ah, 0
+                  jne tp_done
+                  cmp byte ptr [foodchar], '*'
+                  je tp_worldchar1
+                  mov byte ptr [foodchar], '*'
+                  call draw_food
+                  jmp tp_done
+   tp_worldchar1: mov byte ptr [foodchar], '#'
+                  call draw_food
+
+         tp_done: mov sp, bp
+                  pop bp
+                  pop bx
                   pop ax
                   iret
 
@@ -230,8 +263,8 @@ code segment
 		     jmp cwp1
 	       cwp4: mov ax, 80*25
                      push ax
-                     mov al, '+'
-                     mov ah, 00000001b
+                     mov al, byte ptr [worldchar]
+                     mov ah, byte ptr [worldcolor]
                      push ax
                      call draw_point
 
@@ -260,8 +293,8 @@ code segment
                csp2: cmp bx, 0
                      je csp3
                      push bx
-                     mov al, ' '
-                     mov ah, 0h
+                     mov al, byte ptr [worldchar]
+                     mov ah, byte ptr [worldcolor]
                      push ax
 		     call draw_point
 
@@ -295,8 +328,8 @@ code segment
                dsp2: cmp bx, 0
                      je dsp3
                      push bx
-                     mov al, '*'
-                     mov ah, 00000010b
+                     mov al, byte ptr [snakechar]
+                     mov ah, byte ptr [snakecolor]
                      push ax
 		     call draw_point
 
@@ -320,8 +353,8 @@ code segment
 		     push ax
                      mov ax, 1
                      push ax
-                     mov al, '*'
-                     mov ah, 00000010b
+                     mov al, byte ptr [snakechar]
+                     mov ah, byte ptr [snakecolor]
                      push ax
 		     call draw_point
 
@@ -343,8 +376,8 @@ code segment
 		     push ax
                      mov ax, 1
                      push ax
-                     mov al, ' '
-                     mov ah, 0
+                     mov al, byte ptr [worldchar]
+                     mov ah, byte ptr [worldcolor]
                      push ax
 		     call draw_point
                      mov word ptr [bx], 0 ; clear tail data
@@ -366,8 +399,8 @@ code segment
 		     push ax
                      mov ax, 1
                      push ax
-                     mov al, '$'
-                     mov ah, 10001110b
+                     mov al, byte ptr [foodchar]
+                     mov ah, byte ptr [foodcolor]
                      push ax
 		     call draw_point
 
@@ -386,8 +419,8 @@ code segment
 		     push ax
                      mov ax, 1
                      push ax
-                     mov al, ' '
-                     mov ah, 0
+                     mov al, byte ptr [worldchar]
+                     mov ah, byte ptr [worldcolor]
                      push ax
 		     call draw_point
                      
