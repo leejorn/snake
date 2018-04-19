@@ -100,17 +100,22 @@ code segment
                       cmp al, 'l' ; right
                       je kw_do
                       jmp kw_done
-
+		      cmp al, 'q' ; quit game
+                      je kw_break
+                      jmp kw_done
                kw_do: mov byte ptr [snakedir], al
                       call snake_eat_ahead                       
 
              kw_done: pop bx
                       pop ax
-		      
 		      jmp read_keyword
+            kw_break: jmp game_over
 
-     	mov ax, 4c00h
-     	int 21h
+     	game_over: mov byte ptr [worldchar], ''
+		   mov byte ptr [worldcolor], 0h
+		   call clear_world
+		   mov ax, 4c00h
+     		   int 21h
 
         ; snake_eat_ahead
         snake_eat_ahead: push bp
