@@ -16,7 +16,7 @@ data segment
          snake_tail dw 1 dup(0) ; snake_list tail, 
 	 static_head dw 1 dup(0); head, no change = snake_list
          static_tail dw 1 dup(0); tail, no change = snake_list + (80*25 -1)*4
-	 snake_list dd 80*25 dup(0) ; snake_list single is (col(8bit) row(8bit) dir(8bit) flag(8bit))
+	 snake_list dd 80*25 dup(0) ; snake_list single is (col(8bit) row(8bit) flag(8bit) other(8bit))
          world_map db 80*25 dup(0) ; dir(8bit) 
          food_pos dw 1 dup(0)  ; food pos (col(8bit) row(8bit)) 
 data ends
@@ -60,6 +60,7 @@ code segment
                mov bx, [snake_head]
                mov byte ptr [bx], 40; col 40      0 <= col <= 79
                mov byte ptr [bx+1], 13; row 13    0 <= row <= 24
+	       mov byte ptr [bx+2], 1; used flag
                pop bx
 
                sub [snake_head], 4
@@ -67,6 +68,7 @@ code segment
                mov bx, [snake_head]
                mov byte ptr [bx], 39 ; col 39
                mov byte ptr [bx+1], 13 ; row 13
+	       mov byte ptr [bx+2], 1; used flag
                pop bx
 
                ; draw the init snake
@@ -104,6 +106,8 @@ code segment
                       jmp kw_done
                kw_do: mov byte ptr [snakedir], al
                       call snake_eat_ahead                       
+		      cmp word ptr [food_pos], 0FFFFH
+		      je kw_break
 
              kw_done: pop bx
                       pop ax
@@ -153,6 +157,7 @@ code segment
                          jmp sea_add_head
         sea_head_around: mov si, word ptr [static_tail] ; head around to static tail
         sea_add_head:    mov word ptr [si], dx ; add head
+			 mov word ptr [si+2], 1; used flag
                          mov word ptr [snake_head], si ; change head
                          call draw_snake_head ; draw head 
 
@@ -164,11 +169,11 @@ code segment
                          sub si, 4
                          jmp sea_sub_tail
         sea_tail_around: mov si, word ptr [static_tail] ; tail around to static tail
-        sea_sub_tail:    mov word ptr [snake_tail], si
+           sea_sub_tail: mov word ptr [snake_tail], si
                          call clear_snake_tail
                          jmp sea_done
 
-              sea_food:  call clear_food
+               sea_food: call eat_and_gen_food
               
                sea_done: popf
                          mov sp, bp
@@ -340,9 +345,11 @@ code segment
 		     pop bp
 		     ret
 
-       clear_food:   push bp
+   eat_and_gen_food: push bp
 		     mov bp, sp
                      push ax
+		     push bx
+		     push dx
                      pushf
 
                      mov ax, word ptr [food_pos]
@@ -354,9 +361,34 @@ code segment
                      push ax
 		     call draw_point
                      
-                     mov word ptr [food_pos], 0 ; clear food pos
+		     ; gen new food pos
+                     xor ax, ax
+		     xor dx, dx
+                     out 70h, al
+                     in al, 71h ; sec
+                     mul al
+		     mov bx, 80*25
+                     div bx
+		     mov bx, dx
+		     mov si, [static_head]
+     find_next_food: cmp bx, 80*25
+                     jnb no_new_food
+		     cmp byte ptr [bx+si+2], 0
+		     je gen_new_food
+		     add bx, 1
+		     jmp find_next_food
+	no_new_food: mov word ptr [food_pos], 0FFFFH
+   		     jmp done_new_food		     
+       gen_new_food: mov ax, bx
+                     xor bx, bx
+                     mov bl, 80
+		     div bl
+		     xchg ah, al
+		     mov word ptr [food_pos], ax ; clear food pos
 
-                     popf
+      done_new_food: popf
+		     pop dx
+		     pop bx
                      pop ax
 		     mov sp, bp
 		     pop bp
