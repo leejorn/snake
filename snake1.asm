@@ -107,7 +107,8 @@ code segment
                kw_do: mov byte ptr [snakedir], al
                       call snake_eat_ahead                       
 		      cmp word ptr [food_pos], 0FFFFH
-		      je kw_break
+                      je kw_break
+                      call draw_food
 
              kw_done: pop bx
                       pop ax
